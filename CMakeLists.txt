@@ -1,12 +1,14 @@
 cmake_minimum_required(VERSION 2.6)
 project(rocksdb)
+set(ROCKSDB_VERSION "4.5.1")
+set(ROCKSDB_VERSION_MAJOR "4")
 
 if (WIN64)
 include(win64.cmake)
 endif (WIN64)
 
 if (UNIX)
-set(CMAKE_CXX_FLAGS "-DOS_LINUX -DROCKSDB_PLATFORM_POSIX -DGFLAGS=google")
+set(CMAKE_CXX_FLAGS "-DOS_LINUX -DROCKSDB_PLATFORM_POSIX -DGFLAGS=gflags")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DROCKSDB_LIB_IO_POSIX -DSNAPPY")
 set(PLATFORM_SOURCES
         port/port_posix.cc
@@ -203,8 +205,13 @@ set(SOURCES
         ${PLATFORM_SOURCES}
 )
 
-add_library(rocksdb SHARED ${SOURCES})
-set_property(TARGET rocksdb PROPERTY CXX_STANDARD 11)
+add_library(rocksdb-static STATIC ${SOURCES})
+add_library(rocksdb-shared SHARED ${SOURCES})
+set_target_properties(rocksdb-shared PROPERTIES VERSION ${ROCKSDB_VERSION}
+                      SOVERSION ${ROCKSDB_VERSION_MAJOR})
+
+set_property(TARGET rocksdb-static PROPERTY CXX_STANDARD 11)
+set_property(TARGET rocksdb-shared PROPERTY CXX_STANDARD 11)
 
 set(APPS
         db/db_bench.cc
@@ -327,15 +334,33 @@ foreach(sourcefile ${EXES})
     string(REGEX REPLACE "^((.+)/)+" "" exename ${exename})
     add_executable(${exename}${ARTIFACT_SUFFIX} ${sourcefile})
     target_link_libraries(${exename}${ARTIFACT_SUFFIX} rocksdb gtest gflags
-                          snappy ${CMAKE_THREAD_LIBS_INIT})
+                          rt snappy ${CMAKE_THREAD_LIBS_INIT})
     set_property(TARGET ${exename}${ARTIFACT_SUFFIX} PROPERTY CXX_STANDARD 11)
 endforeach(sourcefile ${EXES})
 
-install(TARGETS rocksdb DESTINATION lib)
+install(TARGETS rocksdb-static COMPONENT devel ARCHIVE DESTINATION lib)
+install(TARGETS rocksdb-shared COMPONENT runtime DESTINATION lib)
 install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/rocksdb/"        
+        COMPONENT devel
         DESTINATION include/rocksdb)
+
+# TODO: Figure out how to package all binaries, not just "ldb"
+install(TARGETS ldb RUNTIME
+        DESTINATION bin
+        COMPONENT tools)
 
 # Packaging
 set(CPACK_PACKAGE_CONTACT "rocksdb@fb.com")
-set(CPACK_PACKAGE_VERSION "4.5.1")
+set(CPACK_PACKAGE_VERSION "${ROCKSDB_VERSION}")
 include(CPack)
+
+# Components
+cpack_add_component(devel REQUIRED DISPLAY_NAME "rocksdb-devel" DESCRIPTION "Needed for programmers")
+cpack_add_component(tools REQUIRED DISPLAY_NAME "rocksdb-tools" DESCRIPTION "RocksDB tools")
+cpack_add_component(runtime REQUIRED DISPLAY_NAME "rocksdb" DESCRIPTION "RocksDB shared lib")
+set(CPACK_COMPONENTS_ALL devel tools runtime)
+
+# Hacks to force multiple package generation. Unsuccessful so far
+set(CPACK_COMPONENTS_IGNORE_GROUPS 1)
+set(CPACK_COMPONENTS_ALL_IN_ONE_PACKAGE 0)
+set(CPACK_RPM_COMPONENT_INSTALL ON)
