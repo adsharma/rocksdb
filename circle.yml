@@ -1,0 +1,5 @@
+dependencies:
+  pre:
+    - mkdir build; cd build; cmake  -DCMAKE_BUILD_TYPE=RELEASE ..
+  override:
+    - cd build; make -j4; cpack -G DEB
