@@ -336,8 +336,8 @@ foreach(sourcefile ${APPS})
     string(REGEX REPLACE "^((.+)/)+" "" exename ${exename})
     add_executable(${exename}${ARTIFACT_SUFFIX} ${sourcefile})
     list(APPEND EXES ${exename}${ARTIFACT_SUFFIX})
-    target_link_libraries(${exename}${ARTIFACT_SUFFIX} rocksdb gtest gflags
-                          rt snappy ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries(${exename}${ARTIFACT_SUFFIX} rocksdb-shared gtest gflags
+                          rt snappy bz2 lz4 z ${CMAKE_THREAD_LIBS_INIT})
     set_property(TARGET ${exename}${ARTIFACT_SUFFIX} PROPERTY CXX_STANDARD 11)
 endforeach(sourcefile ${EXES})
 
