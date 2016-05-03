@@ -8,8 +8,9 @@ include(win64.cmake)
 endif (WIN64)
 
 if (UNIX)
-set(CMAKE_CXX_FLAGS "-DOS_LINUX -DROCKSDB_PLATFORM_POSIX -DGFLAGS=gflags")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DROCKSDB_LIB_IO_POSIX -DSNAPPY")
+set(CMAKE_CXX_FLAGS "-DOS_LINUX -DROCKSDB_PLATFORM_POSIX -DGFLAGS=google")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DROCKSDB_LIB_IO_POSIX")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DZLIB -DBZIP2 -DSNAPPY -DLZ4")
 set(PLATFORM_SOURCES
         port/port_posix.cc
         util/env_posix.cc
@@ -213,6 +214,9 @@ add_library(rocksdb-shared SHARED ${SOURCES})
 set_target_properties(rocksdb-shared PROPERTIES VERSION ${ROCKSDB_VERSION}
                       SOVERSION ${ROCKSDB_VERSION_MAJOR})
 
+set_target_properties(rocksdb-static PROPERTIES OUTPUT_NAME "rocksdb")
+set_target_properties(rocksdb-shared PROPERTIES OUTPUT_NAME "rocksdb")
+
 set_property(TARGET rocksdb-static PROPERTY CXX_STANDARD 11)
 set_property(TARGET rocksdb-shared PROPERTY CXX_STANDARD 11)
 
@@ -338,12 +342,11 @@ set(TESTS
         utilities/write_batch_with_index/write_batch_with_index_test.cc
 )
 
-set(EXES ${APPS})
-
-foreach(sourcefile ${EXES})
+foreach(sourcefile ${APPS})
     string(REPLACE ".cc" "" exename ${sourcefile})
     string(REGEX REPLACE "^((.+)/)+" "" exename ${exename})
     add_executable(${exename}${ARTIFACT_SUFFIX} ${sourcefile})
+    list(APPEND EXES ${exename}${ARTIFACT_SUFFIX})
     target_link_libraries(${exename}${ARTIFACT_SUFFIX} rocksdb gtest gflags
                           rt snappy ${CMAKE_THREAD_LIBS_INIT})
     set_property(TARGET ${exename}${ARTIFACT_SUFFIX} PROPERTY CXX_STANDARD 11)
@@ -356,22 +359,30 @@ install(DIRECTORY "${PROJECT_SOURCE_DIR}/include/rocksdb/"
         DESTINATION include/rocksdb)
 
 # TODO: Figure out how to package all binaries, not just "ldb"
-install(TARGETS ldb RUNTIME
+install(TARGETS ${EXES} RUNTIME
         DESTINATION bin
         COMPONENT tools)
+
+
 
 # Packaging
 set(CPACK_PACKAGE_CONTACT "rocksdb@fb.com")
 set(CPACK_PACKAGE_VERSION "${ROCKSDB_VERSION}")
 include(CPack)
 
-# Components
-cpack_add_component(devel REQUIRED DISPLAY_NAME "rocksdb-devel" DESCRIPTION "Needed for programmers")
-cpack_add_component(tools REQUIRED DISPLAY_NAME "rocksdb-tools" DESCRIPTION "RocksDB tools")
-cpack_add_component(runtime REQUIRED DISPLAY_NAME "rocksdb" DESCRIPTION "RocksDB shared lib")
-set(CPACK_COMPONENTS_ALL devel tools runtime)
+set(CMAKE_INSTALL_PREFIX /usr)
 
-# Hacks to force multiple package generation. Unsuccessful so far
-set(CPACK_COMPONENTS_IGNORE_GROUPS 1)
-set(CPACK_COMPONENTS_ALL_IN_ONE_PACKAGE 0)
-set(CPACK_RPM_COMPONENT_INSTALL ON)
+# Debian packaging
+set(DEB_PACKAGE_COMPONENTS tools devel runtime)
+
+set(DEB_PACKAGE_tools_NAME "${CMAKE_PROJECT_NAME}-tools")
+set(DEB_PACKAGE_tools_DEPENDS "lib${CMAKE_PROJECT_NAME}")
+set(DEB_PACKAGE_tools_DESRCIPTION "RocksDB tools package")
+
+set(DEB_PACKAGE_runtime_NAME "lib${CMAKE_PROJECT_NAME}")
+set(DEB_PACKAGE_runtime_DESRCIPTION "RocksDB package")
+
+set(DEB_PACKAGE_devel_NAME "lib${CMAKE_PROJECT_NAME}-dev")
+set(DEB_PACKAGE_devel_DESRCIPTION "RocksDB dev package")
+
+include(deb_packaging.cmake)
