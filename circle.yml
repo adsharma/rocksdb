@@ -5,4 +5,4 @@ dependencies:
     - sudo apt-get install -y libsnappy-dev libbz2-dev liblz4-dev zlib1g-dev libgflags-dev
     - mkdir build; cd build; cmake  -DCMAKE_BUILD_TYPE=RELEASE ..
   override:
-    - cd build; make -j4; cpack -G DEB
+    - cd build; make -j4; make deb_packaging
