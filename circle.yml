@@ -5,4 +5,11 @@ dependencies:
     - sudo apt-get install -y libsnappy-dev libbz2-dev liblz4-dev zlib1g-dev libgflags-dev
     - mkdir build; cd build; cmake  -DCMAKE_BUILD_TYPE=RELEASE ..
   override:
-    - cd build; make -j4; make deb_packaging
+    - cd build; make -j4; make deb_package
+
+deployment:
+  production:
+    branch: cmake_451
+    commands:
+      - package_cloud push rocksdb/ubuntu/14.04 ./build/rocksdb*.deb
+
