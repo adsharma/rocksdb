@@ -12,5 +12,5 @@ deployment:
   production:
     branch: cmake_451
     commands:
-      - package_cloud push rocksdb/ubuntu/14.04 ./build/rocksdb*.deb
+      - package_cloud push asharma/rocksdb/ubuntu/14.04 ./build/rocksdb*.deb
 
